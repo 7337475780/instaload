@@ -52,6 +52,7 @@ export default function VideoCard({
         alt={title}
         width={300}
         height={250}
+        unoptimized
         className={`w-auto h-auto rounded-md object-cover transition-opacity duration-500 ${
           imageLoaded ? "opacity-100" : "opacity-0"
         }`}
