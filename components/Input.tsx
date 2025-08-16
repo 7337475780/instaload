@@ -35,25 +35,30 @@ export const Input: React.FC<InputProps> = ({ onFetched }) => {
       onFetched(data);
     } catch (err) {
       console.error(err);
-      alert("Failed to fetch video info");
+      toast.error("Failed to fetch video info");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") fetchVideoInfo();
+  };
+
   return (
-    <div className="flex flex-col sm:flex-row w-full max-w-xl gap-2 px-2 sm:px-0">
+    <div className="flex flex-col sm:flex-row w-full max-w-xl gap-3 px-2 sm:px-0">
       <input
         type="text"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={handleKeyPress}
         placeholder="Paste Instagram URL"
-        className="flex-1 p-3 border border-purple-300 rounded-full focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-300 placeholder:text-gray-400 transition-all w-full sm:w-auto"
+        className="flex-1 p-3 border border-purple-300 dark:border-purple-700 dark:bg-gray-800 dark:text-white rounded-full focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-300 placeholder:text-gray-400 shadow-sm transition-all duration-300 w-full sm:w-auto"
       />
       <button
         onClick={fetchVideoInfo}
         disabled={loading}
-        className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-violet-500 via-indigo-500 to-blue-500 cursor-pointer hover:brightness-110 text-white font-semibold rounded-full   shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-violet-500 via-indigo-500 to-blue-500 cursor-pointer hover:brightness-110 text-white font-semibold rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
       >
         {loading ? "Fetching..." : "Fetch"}
       </button>

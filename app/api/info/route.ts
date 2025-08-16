@@ -22,11 +22,19 @@ export async function POST(req: NextRequest) {
       `"${ytDlpPath}" -j --no-warnings "${url}"`
     );
     const info = JSON.parse(stdout);
+    const thumbnail =
+      info.thumbnail ||
+      info.thumbnails?.reduce(
+        (prev: { width: number }, curr: { width: number }) =>
+          curr.width > prev.width ? curr : prev,
+        info.thumbnails[0]
+      )?.url ||
+      null;
 
     return new Response(
       JSON.stringify({
         title: info.title || "Instagram Reel",
-        thumbnail: info.thumbnail,
+        thumbnail: thumbnail,
         type: info.ext || "mp4",
         downloadUrl: `/api/download?url=${encodeURIComponent(url)}`,
       }),
