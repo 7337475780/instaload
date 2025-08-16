@@ -2,7 +2,7 @@
 import Image from "next/image";
 import React, { useState } from "react";
 import { toast } from "sonner";
-
+import { sanitizeFilename } from "@/lib/utils";
 type Props = {
   title: string;
   thumbnail: string;
@@ -10,6 +10,10 @@ type Props = {
   type: string;
 };
 
+/**
+ * A component to display video information and provide a download button.
+ * It includes a loading skeleton for a better user experience.
+ */
 export default function VideoCard({
   title,
   thumbnail,
@@ -20,22 +24,21 @@ export default function VideoCard({
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const handleDownload = () => {
-    setDownloading(true);
-    const toastId = toast.loading("Starting download...");
+    const toastId = toast.loading("Starting download...", { duration: 3000 }); // Provide a timeout for the toast
+
+    // The download is initiated by the browser, so we just give the user feedback
+    // and rely on the browser's download manager.
     try {
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = `${title || "instagram-video"}.mp4`;
+      a.download = `${sanitizeFilename(title)}.mp4`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-
       toast.success("Download started!", { id: toastId });
     } catch (err) {
       console.error(err);
       toast.error("Download failed.", { id: toastId });
-    } finally {
-      setDownloading(false);
     }
   };
 
@@ -60,14 +63,9 @@ export default function VideoCard({
       <p className="text-sm text-gray-500 dark:text-gray-200">{type}</p>
       <button
         onClick={handleDownload}
-        disabled={downloading}
-        className={`mt-4 w-full px-4 cursor-pointer py-2 rounded-full text-white transition ${
-          downloading
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-gradient-to-r from-purple-500 to-violet-600 hover:from-violet-600 hover:to-purple-700"
-        }`}
+        className="mt-4 w-full cursor-pointer px-4 py-2 rounded-full text-white transition bg-gradient-to-r from-purple-500 to-violet-600 hover:from-violet-600 hover:to-purple-700"
       >
-        {downloading ? "Downloading..." : "Download"}
+        Download
       </button>
     </div>
   );

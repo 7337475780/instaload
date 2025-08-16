@@ -1,13 +1,21 @@
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
+import fsp from "fs/promises";
 import fs from "fs";
 import os from "os";
 import path from "path";
 
-const ytDlpPath =
-  process.platform === "win32"
-    ? "C:\\Users\\tharu\\Downloads\\yt-dlp.exe"
-    : "yt-dlp";
+const findYtDlpPath = () => {
+  if (process.platform === "win32") {
+    const windowsPath = "C:\\Users\\tharu\\Downloads\\yt-dlp.exe";
+    if (fs.existsSync(windowsPath)) {
+      return windowsPath;
+    }
+  }
+  return "yt-dlp"; // Fallback to system PATH
+};
+
+const ytDlpPath = findYtDlpPath();
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
@@ -18,13 +26,15 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  let downloadedFile: string | null = null;
+
   try {
     const tmpDir = os.tmpdir();
-    // Allow yt-dlp to handle extensions for merging
-    const tmpFile = path.join(tmpDir, `reel-${Date.now()}.%(ext)s`);
+    const tmpFilename = `reel-${Date.now()}.%(ext)s`;
+    const tmpFile = path.join(tmpDir, tmpFilename);
 
-    // Download video to temp file
     await new Promise<void>((resolve, reject) => {
+      // Use spawn to safely execute with separate arguments
       const ytProcess = spawn(ytDlpPath, [
         "-f",
         "bestvideo+bestaudio",
@@ -44,30 +54,15 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    // Find the actual downloaded file (yt-dlp replaces %(ext)s)
-    const files = fs
-      .readdirSync(tmpDir)
-      .filter((f) => f.startsWith(path.basename(tmpFile).split(".%(ext)s")[0]));
-    if (files.length === 0) throw new Error("Downloaded file not found");
+    const files = await fsp.readdir(tmpDir);
+    const fileName = files.find((f) =>
+      f.startsWith(path.basename(tmpFile).split(".%(ext)s")[0])
+    );
+    if (!fileName) throw new Error("Downloaded file not found");
 
-    const downloadedFile = path.join(tmpDir, files[0]);
-    const fileStream = fs.createReadStream(downloadedFile);
-
-    // Convert Node ReadStream to Web ReadableStream
-    const readableStream = new ReadableStream({
-      start(controller) {
-        fileStream.on("data", (chunk) => controller.enqueue(chunk));
-        fileStream.on("end", () => {
-          controller.close();
-          fs.unlink(downloadedFile, () => {}); // cleanup
-        });
-        fileStream.on("error", (err) => controller.error(err));
-      },
-      cancel() {
-        fileStream.destroy();
-        fs.unlink(downloadedFile, () => {});
-      },
-    });
+    downloadedFile = path.join(tmpDir, fileName);
+    const fileHandle = await fsp.open(downloadedFile, "r");
+    const fileStream = fileHandle.createReadStream();
 
     const headers = new Headers();
     headers.set("Content-Type", "video/mp4");
@@ -76,11 +71,21 @@ export async function GET(req: NextRequest) {
       `attachment; filename="instagram-reel.mp4"`
     );
 
-    return new Response(readableStream, { headers });
+    // Stream the file directly to the response
+    return new Response(fileStream as any, { headers });
   } catch (err: any) {
     console.error("Download error:", err);
     return new Response(`Failed to download video: ${err.message}`, {
       status: 500,
     });
+  } finally {
+    if (downloadedFile) {
+      await fsp.unlink(downloadedFile).catch((err) => {
+        console.error(
+          `Failed to delete temporary file: ${downloadedFile}`,
+          err
+        );
+      });
+    }
   }
 }

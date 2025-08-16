@@ -2,22 +2,29 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
 
-interface InputProps {
-  onFetched: (data: {
-    title: string;
-    thumbnail: string;
-    downloadUrl: string;
-    type: string;
-  }) => void;
+// Define the shape of the data returned from the API for better type safety
+interface FetchedData {
+  title: string;
+  thumbnail: string;
+  downloadUrl: string;
+  type: string;
 }
 
+interface InputProps {
+  onFetched: (data: FetchedData) => void;
+}
+
+/**
+ * A component for a user to enter an Instagram URL and fetch video info.
+ * It handles input state, API communication, and user feedback.
+ */
 export const Input: React.FC<InputProps> = ({ onFetched }) => {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   const fetchVideoInfo = async () => {
-    if (!url) {
-      toast.error("Please enter a valid URL");
+    if (!url || !url.startsWith("https://www.instagram.com/")) {
+      toast.error("Please enter a valid Instagram URL");
       return;
     }
 
@@ -31,7 +38,7 @@ export const Input: React.FC<InputProps> = ({ onFetched }) => {
 
       if (!res.ok) throw new Error("Failed to fetch video info");
 
-      const data = await res.json();
+      const data: FetchedData = await res.json();
       onFetched(data);
     } catch (err) {
       console.error(err);
